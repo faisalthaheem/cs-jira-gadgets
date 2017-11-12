@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Module>
+    <ModulePrefs title="Extended Issue Statistics" directory_title="Extended Issue Statistics" description="Extends the functionality of stock Issue Statistics by highlighting due tasks."
+             author="Faisal Thaheem" author_affiliation="Computed Synergy"
+             author_location="Islamabad, Pakistan" height="100"
+             screenshot='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-screenshot.png")'
+             thumbnail='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-thumb.png")'>
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                Other
+            </Param>
+        </Optional>
+        <Require feature="setprefs" />
+        <Require feature="views" />
+        <Optional feature="atlassian.util" />
+        <Optional feature='auth-refresh' />
+        <Require feature="settitle"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="oauthpopup" />
+        #oauth
+        #supportedLocales("gadget.common,gadget.stats")
+    </ModulePrefs>
+    <UserPref name="isConfigured" datatype="hidden" default_value="false" />
+    <UserPref name="projectOrFilterId" datatype="hidden" />
+    <UserPref name="refresh" datatype="hidden" default_value="false" />
+    <!-- use of requireContext below is to invoke batching of files -->
+    <Content type="html" view="profile,canvas,home">
+        <![CDATA[
+        #requireContext("com.atlassian.jira.gadgets:autocomplete")
+        #requireResource("com.atlassian.jira.gadgets:g-stats")
+		#requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+		#requireResource("com.atlassian.auiplugin:ajs")
+        #includeResources()
+        <style type="text/css">
+
+		.g-stats .stats-percentage .colour-bar-red {
+			border-top: 13px solid #ff0000;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-yellow {
+			border-top: 13px solid #ffff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-green {
+			border-top: 13px solid #00ff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		thead {
+			border-bottom: 1px dashed;
+		}
+        </style>
+
+        <script type="text/javascript">
+		
+		function makeSafeUserName(username){
+			return username.replace(/[\s\.]/, '');
+		}
+		
+        (function ()
+        {
+            gadgets.window.setTitle("Issue Statistics - Incomplete Tasks");
+            var gadget = AJS.Gadget({
+                baseUrl: "__ATLASSIAN_BASE_URL__",
+                useOauth: "/rest/gadget/1.0/currentUser",
+                config: {
+                    descriptor: function (args)
+                    {
+
+                        var gadget = this;
+                        var statType = function(name)
+                        {
+                            return {
+                                userpref: name,
+                                label: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".label"),
+                                description: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".description"),
+                                type: "select",
+                                selected: gadget.getPref(name),
+                                options: args.statType.stats
+                            };
+                        };
+                        var option = function(type, value)
+                        {
+                            return {
+                                label:gadget.getMsg("gadget.stats." + type.toLowerCase() + "." + value.toLowerCase()  + ".label"),
+                                value: value
+                            };
+                        };
+                        return  {
+                            theme : function ()
+                            {
+                                if (gadgets.window.getViewportDimensions().width < 450){
+                                        return "gdt top-label";
+                                    }
+                                    else
+                                    {
+                                        return "gdt";
+                                    }
+                            }(),
+
+                            fields: [
+                                AJS.gadget.fields.projectOrFilterPicker(gadget, "projectOrFilterId", args.filterIds),
+                                AJS.gadget.fields.nowConfigured()
+                            ]
+                        };
+                    },
+                    args: [{
+                            key: "statType",
+                        }]
+                },
+                view: {
+                    enableReload: true,
+                    onResizeReload: false,
+                    template: function (args)
+                    {
+
+                        var makeMarkup = function(title, userid) {
+
+                            var wrapper = AJS.$("<span/>");
+
+                            var element = AJS.$("<span/>");
+							
+                            
+                            element.html("<a onclick=\"jQuery('#issue-details-"+ makeSafeUserName(userid) +"').toggle();gadgets.window.adjustHeight();\">" + title + "</a>");
+                            wrapper.html(element);
+                            return wrapper.html();
+                        };
+						
+						var makeDetailsTable = function(id, title, listTasks){
+							
+							var $wrapper = jQuery(id);
+							var $heading = jQuery('<h4 class="stats-gadget-heading" style="margin-top: 15px;"><span class="stats-gadget-summary">' + title + '</span></h4>');
+							var $table = jQuery("<table width=100%></table>");
+							var $thead = jQuery("<thead><tr><td>Key</td><td>Summary</td><td>Start Date</td><td>Due Date</td></tr></thead>");
+							$table.append($thead);
+							
+							for(var k in listTasks){
+								var r = listTasks[k];
+								var $row = jQuery("<tr><td><a href='"+ r.self +"' target='_blank'>" + r.issueKey + "</a></td><td>" + r.summary + "</td><td> " + r.startDate + "</td><td>" + r.dueDate + "</td></tr>");
+								$table.append($row);
+							}
+							
+							$wrapper.append($heading);
+							return $wrapper.append($table);
+						};
+
+                        var gadget = this;
+                        gadget.getView().addClass("g-stats");
+                        gadget.getView().empty();
+                        gadget.getView().append(jQuery("#content").clone());
+                        var $ul = jQuery("#stats-gadget-list");
+                        $ul.empty();
+						jQuery("#stats-gadget-project-or-filter-name").text(args.stats.projectName);
+                        gadget.title = args.stats.projectName;
+						gadgets.window.setTitle("Issue Statistics - Incomplete Tasks - " + args.stats.projectName);
+						jQuery("#stats-gadget-total-issues").text(args.stats.totalIssueCount);
+
+                        if (args.stats != null) {
+							
+                            for (var k in args.stats.userStats) {
+							
+                                var row = args.stats.userStats[k];
+                                var $row = jQuery("<li class=\"stats-row\"/>");
+                                var $count = jQuery("<span class=\"stats-count\">[" + row.incompleteIssuesCount + "]</span>");
+                                var $title = jQuery("<div class=\"stats-title\">" + makeMarkup(row.userName + "<span style='float:right;'>Incomplete: </span>", row.userId) + "</div>");
+                                $title.prepend($count);
+                                if (row.url) {
+                                    $count.wrap(jQuery("<a/>").attr("href", row.url));
+                                }
+
+								var $thisRow = jQuery("<div/>");
+                                var percentageStrTotal = "<div class=\"stats-percentage\"><table width=\"95%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\"><tr><td width=\"" +
+                                                    row.incompleteIssuesPercentage + "%\"><div class=\"colour-bar\"></div></td><td width=\"" +
+                                                    (100 - row.incompleteIssuesPercentage) + "%\"><span class='percent-val'>" + row.incompleteIssuesPercentage + "%</span></td></tr></table></div>";
+                                var $percentageTotal = jQuery(percentageStrTotal);
+                                $thisRow.append($title).append($percentageTotal);
+								$row.append($thisRow);
+								
+								
+								
+								var $thisRow = jQuery("<div style='clear: both;'/>");
+								var $count = jQuery("<span class=\"stats-count\">[" + row.completedIssuesCount + "]</span>");
+                                var $title = jQuery("<div class=\"stats-title\">" + makeMarkup("<span style='float:right;'>Completed: </span>", row.userId) + "</div>");
+								$title.prepend($count);
+								var percentage = Math.round((row.completedIssuesCount / (row.incompleteIssuesCount == 0 ? 1 : row.incompleteIssuesCount)) * 100);
+								var percentageCompletedTasksStr = "<div class=\"stats-percentage\"><table width=\"95%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\"><tr><td width=\"" +
+                                                    row.completedIssuesPercentage + "%\"><div class=\"colour-bar-green\"></div></td><td width=\"" +
+                                                    (100 - row.completedIssuesPercentage) + "%\"><span class='percent-val'>" + row.completedIssuesPercentage + "%</span></td></tr></table></div>";
+                                var $percentageCompletedTasks = jQuery(percentageCompletedTasksStr);
+                                $thisRow.append($title).append($percentageCompletedTasks);
+								$row.append($thisRow);
+								
+								
+								var $thisRow = jQuery("<div style='clear: both;'/>");
+								var $count = jQuery("<span class=\"stats-count\">[" + (row.issuesNotEndedCount + row.issuesNotStartedCount )+ "]</span>");
+                                var $title = jQuery("<div class=\"stats-title\">" + makeMarkup("<span style='float:right;'>Overdue: </span>", row.userId) + "</div>");
+								$title.prepend($count);
+								var percentage = Math.round(( (row.issuesNotEndedCount + row.issuesNotStartedCount) / (row.incompleteIssuesCount == 0 ? 1 : row.incompleteIssuesCount)) * 100);
+								percentageStrOverdueEnd = "<div class=\"stats-percentage\"><table width=\"95%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\"><tr><td width=\"" +
+                                                    percentage + "%\"><div class=\"colour-bar-red\"></div></td><td width=\"" +
+                                                    (100 - percentage) + "%\"><span class='percent-val'>" + percentage + "%</span></td></tr></table></div>";
+                                var $percentageOverdueEnd = jQuery(percentageStrOverdueEnd);
+                                $thisRow.append($title).append($percentageOverdueEnd);
+								$row.append($thisRow);
+								
+								
+								var $thisRow = jQuery("<div style='clear: both;'/>");
+								var $count = jQuery("<span class=\"stats-count\">[" + row.issuesRiskOverdueCount + "]</span>");
+                                var $title = jQuery("<div class=\"stats-title\">" + makeMarkup("<span style='float:right;'>Risk Overdue: </span>", row.userId) + "</div>");
+								$title.prepend($count);
+								var percentage = Math.round((row.issuesRiskOverdueCount / (row.incompleteIssuesCount == 0 ? 1 : row.incompleteIssuesCount)) * 100);
+								percentageStrRiskOverdue = "<div class=\"stats-percentage\"><table width=\"95%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\"><tr><td width=\"" +
+                                                    percentage + "%\"><div class=\"colour-bar-yellow\"></div></td><td width=\"" +
+                                                    (100 - percentage) + "%\"><span class='percent-val'>" + percentage + "%</span></td></tr></table></div>";
+                                var $percentageRiskOverdue = jQuery(percentageStrRiskOverdue);
+                                $thisRow.append($title).append($percentageRiskOverdue);
+								$row.append($thisRow);
+								
+								
+                                $ul.append($row);
+								
+								//append the details
+								var safeUserId = makeSafeUserName(row.userId);
+								var $wrapper = jQuery("<div id=issue-details-"+ safeUserId +" style='display:none;'/>");
+								jQuery("#content").append($wrapper);
+								jQuery("#content").append(makeDetailsTable('#issue-details-' + safeUserId,'Due &amp; not started - ' + row.userId, row.issuesNotStartedList));
+								jQuery("#content").append(makeDetailsTable('#issue-details-' + safeUserId,'Due &amp; not ended  - ' + row.userId, row.issuesNotEndedList));
+								jQuery("#content").append(makeDetailsTable('#issue-details-' + safeUserId,'Risk Overdue - ' + row.userId, row.issuesRiskOverdueList));
+                            }
+                        } else {
+                            $ul.append("<li>__MSG_gadget.stats.no.results__</li>");
+                        }
+                    },
+                    args: [{
+                        key: "stats",
+                        ajaxOptions: function () {
+                                return {
+                                    url: "/rest/cs-tools-gadget/1.0/projects/issue-stats.json?projectName=" + gadgets.util.unescapeString(this.getPref("projectOrFilterId")),
+                                    data:  {
+                                    }
+                                };
+                        }
+                    }]
+                }
+            });
+        })();
+        </script>
+
+        <div id="template" style="display:none">
+            <div id="content">
+                <h4 class="stats-gadget-heading">
+                    <span class="stats-gadget-summary">Statistics</span>
+                </h4>
+                <ul id="stats-gadget-list">
+                </ul>
+				<div class="stats-gadget-total">Total Issues:<span id="stats-gadget-total-issues"></span></div>
+            </div>
+        </div>
+        ]]>
+    </Content>
+</Module>

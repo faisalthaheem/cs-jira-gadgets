@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Module>
+    <ModulePrefs title="Component Unfinished Tasks Statistics" directory_title="Component Unfinished Tasks Statistics" description="Displays the unfinished tasks breakdown by component."
+             author="Faisal Thaheem" author_affiliation="Computed Synergy"
+             author_location="Islamabad, Pakistan" height="100"
+             screenshot='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-screenshot.png")'
+             thumbnail='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-thumb.png")'>
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                Other
+            </Param>
+        </Optional>
+        <Require feature="setprefs" />
+        <Require feature="views" />
+        <Optional feature="atlassian.util" />
+        <Optional feature='auth-refresh' />
+        <Require feature="settitle"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="oauthpopup" />
+        #oauth
+        #supportedLocales("gadget.common,gadget.stats")
+    </ModulePrefs>
+    <UserPref name="isConfigured" datatype="hidden" default_value="false" />
+    <UserPref name="projectOrFilterId" datatype="hidden" />
+    <UserPref name="refresh" datatype="hidden" default_value="false" />
+    <!-- use of requireContext below is to invoke batching of files -->
+    <Content type="html" view="profile,canvas,home">
+        <![CDATA[
+        #requireContext("com.atlassian.jira.gadgets:autocomplete")
+        #requireResource("com.atlassian.jira.gadgets:g-stats")
+		#requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+		#requireResource("com.atlassian.auiplugin:ajs")
+        #includeResources()
+        <style type="text/css">
+		</style>
+
+        <script type="text/javascript">
+		
+        (function ()
+        {
+            gadgets.window.setTitle("Component Statistics");
+            var gadget = AJS.Gadget({
+                baseUrl: "__ATLASSIAN_BASE_URL__",
+                useOauth: "/rest/gadget/1.0/currentUser",
+                config: {
+                    descriptor: function (args)
+                    {
+
+                        var gadget = this;
+                        var statType = function(name)
+                        {
+                            return {
+                                userpref: name,
+                                label: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".label"),
+                                description: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".description"),
+                                type: "select",
+                                selected: gadget.getPref(name),
+                                options: args.statType.stats
+                            };
+                        };
+                        var option = function(type, value)
+                        {
+                            return {
+                                label:gadget.getMsg("gadget.stats." + type.toLowerCase() + "." + value.toLowerCase()  + ".label"),
+                                value: value
+                            };
+                        };
+                        return  {
+                            theme : function ()
+                            {
+                                if (gadgets.window.getViewportDimensions().width < 450){
+                                        return "gdt top-label";
+                                    }
+                                    else
+                                    {
+                                        return "gdt";
+                                    }
+                            }(),
+
+                            fields: [
+                                AJS.gadget.fields.projectOrFilterPicker(gadget, "projectOrFilterId", args.filterIds),
+                                AJS.gadget.fields.nowConfigured()
+                            ]
+                        };
+                    },
+                    args: [{
+                            key: "statType",
+                            ajaxOptions:  "/rest/gadget/1.0/statTypes"
+                        }]
+                },
+                view: {
+                    enableReload: true,
+                    onResizeReload: false,
+                    template: function (args)
+                    {
+
+                        var makeMarkup = function(title) {
+
+                            var wrapper = AJS.$("<span/>");
+
+                            var element = AJS.$("<span/>");
+							
+                            
+                            element.html(title);
+                            wrapper.html(element);
+                            return wrapper.html();
+                        };
+						
+
+                        var gadget = this;
+                        gadget.getView().addClass("g-stats");
+                        gadget.getView().empty();
+                        gadget.getView().append(jQuery("#content").clone());
+                        var $ul = jQuery("#stats-gadget-list");
+                        $ul.empty();
+						jQuery("#stats-gadget-project-or-filter-name").text(args.stats.projectName);
+                        gadget.title = args.stats.projectName;
+						gadgets.window.setTitle("Component Statistics - " + args.stats.projectName);
+
+                        if (args.stats != null) {
+                            for (var k in args.stats.stats) {
+								
+                                var row = args.stats.stats[k];
+                                var $row = jQuery("<li class=\"stats-row\"/>");
+                                var $count = jQuery("<span class=\"stats-count\">" + args.stats.stats[k] + "</span>");
+                                var $title = jQuery("<div class=\"stats-title\">" + makeMarkup(k) + "</div>");
+                                $title.prepend($count);
+                                if (row.url) {
+                                    $count.wrap(jQuery("<a/>").attr("href", row.url));
+                                }
+
+								var percentAssignment = Math.round((args.stats.stats[k] / args.stats.totalUnfinishedTasksCount) * 100);
+								var $thisRow = jQuery("<div/>");
+                                var percentageStrTotal = "<div class=\"stats-percentage\"><table width=\"95%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\"><tr><td width=\"" +
+                                                    percentAssignment + "%\"><div class=\"colour-bar\"></div></td><td width=\"" +
+                                                    (100 - percentAssignment) + "%\"><span class='percent-val'>" + percentAssignment + "%</span></td></tr></table></div>";
+                                var $percentageTotal = jQuery(percentageStrTotal);
+                                $thisRow.append($title).append($percentageTotal);
+								$row.append($thisRow);
+								
+								$ul.append($row);
+                            }
+                        } else {
+                            $ul.append("<li>__MSG_gadget.stats.no.results__</li>");
+                        }
+                    },
+                    args: [{
+                        key: "stats",
+                        ajaxOptions: function () {
+                                return {
+                                    url: "/rest/cs-tools-gadget/1.0/projects/component-stats.json?projectName=" + gadgets.util.unescapeString(this.getPref("projectOrFilterId")),
+                                    data:  {
+                                    }
+                                };
+                        }
+                    }]
+                }
+            });
+        })();
+        </script>
+
+        <div id="template" style="display:none">
+            <div id="content">
+                <h4 class="stats-gadget-heading">
+                    <span class="stats-gadget-summary">Statistics - Unfinished tasks by component</span>
+                </h4>
+                <ul id="stats-gadget-list">
+                </ul>
+            </div>
+        </div>
+        ]]>
+    </Content>
+</Module>

@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Module>
+    <ModulePrefs title="QA Statistics" directory_title="QA Statistics" description="Fetches the QA Statistics for the test cycles conducted for a build."
+             author="Faisal Thaheem" author_affiliation="Computed Synergy"
+             author_location="Islamabad, Pakistan" height="100"
+             screenshot='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-screenshot.png")'
+             thumbnail='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-thumb.png")'>
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                Other
+            </Param>
+        </Optional>
+        <Require feature="setprefs" />
+        <Require feature="views" />
+        <Optional feature="atlassian.util" />
+        <Optional feature='auth-refresh' />
+        <Require feature="settitle"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="oauthpopup" />
+        #oauth
+        #supportedLocales("gadget.common,gadget.stats")
+    </ModulePrefs>
+    <UserPref name="isConfigured" datatype="hidden" default_value="false" />
+    <UserPref name="projectKey" datatype="hidden" />
+	<UserPref name="versionNumber" datatype="hidden" />
+    <UserPref name="refresh" datatype="hidden" default_value="false" />
+    <!-- use of requireContext below is to invoke batching of files -->
+    <Content type="html" view="profile,canvas,home">
+        <![CDATA[
+        #requireContext("com.atlassian.jira.gadgets:autocomplete")
+        #requireResource("com.atlassian.jira.gadgets:g-stats")
+		#requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+		#requireResource("com.atlassian.auiplugin:ajs")
+		#requireResource("cs-project-management-tools:g-cs-qastats")
+        #includeResources()
+        <style type="text/css">
+
+		.g-stats .stats-percentage .colour-bar-red {
+			border-top: 13px solid #ff0000;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-yellow {
+			border-top: 13px solid #ffff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-blue {
+			border-top: 13px solid #0000ff;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-green {
+			border-top: 13px solid #00ff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		thead {
+			border-bottom: 1px dashed;
+		}
+        </style>
+
+        <script type="text/javascript">
+		
+		function makeSafeElementId(username){
+			return username.replace(/[\s\.]/, '');
+		}
+		
+        (function ()
+        {
+            gadgets.window.setTitle("QA Statistics - ");
+            var gadget = AJS.Gadget({
+                baseUrl: "__ATLASSIAN_BASE_URL__",
+                useOauth: "/rest/gadget/1.0/currentUser",
+                config: {
+                    descriptor: function (args)
+                    {
+
+                        var gadget = this;
+                        var statType = function(name)
+                        {
+                            return {
+                                userpref: name,
+                                label: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".label"),
+                                description: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".description"),
+                                type: "select",
+                                selected: gadget.getPref(name),
+                                options: args.statType.stats
+                            };
+                        };
+                        var option = function(type, value)
+                        {
+                            return {
+                                label:gadget.getMsg("gadget.stats." + type.toLowerCase() + "." + value.toLowerCase()  + ".label"),
+                                value: value
+                            };
+                        };
+                        return  {
+                            theme : function ()
+                            {
+                                if (gadgets.window.getViewportDimensions().width < 450){
+                                        return "gdt top-label";
+                                    }
+                                    else
+                                    {
+                                        return "gdt";
+                                    }
+                            }(),
+
+                            fields: [
+								{
+									id: "projectKey",
+									userpref: "projectKey",
+									class: "",
+									label: "Project Key",
+									description: "Key of the project to fetch QA statistics for.",
+									type: "text",
+									value: gadget.getPref("projectKey")
+								},
+								{
+									id: "versionNumber",
+									userpref: "versionNumber",
+									class: "",
+									label: "Version Number",
+									description: "The version to fetch test cycles for.",
+									type: "text",
+									value: gadget.getPref("versionNumber")
+								},
+								AJS.gadget.fields.nowConfigured(),
+                            ]
+                        };
+                    },
+                    args: [{
+                            key: "statType",
+                        }]
+                },
+                view: {
+                    enableReload: true,
+                    onResizeReload: false,
+                    template: function (args)
+                    {
+
+                        var makeMarkup = function(title, userid) {
+
+                            var wrapper = AJS.$("<span/>");
+
+                            var element = AJS.$("<span/>");
+							
+                            
+                            element.html("<a onclick=\"jQuery('#issue-details-"+ makeSafeElementId(userid) +"').toggle();gadgets.window.adjustHeight();\">" + title + "</a>");
+                            wrapper.html(element);
+                            return wrapper.html();
+                        };
+						
+						var makeDetailsTable = function(id, title, listTasks){
+							
+							var $wrapper = jQuery(id);
+							var $heading = jQuery('<h4 class="stats-gadget-heading" style="margin-top: 15px;"><span class="stats-gadget-summary">' + title + '</span></h4>');
+							var $table = jQuery("<table width=100%></table>");
+							var $thead = jQuery("<thead><tr><td>Key</td><td>Summary</td><td>Start Date</td><td>Due Date</td></tr></thead>");
+							$table.append($thead);
+							
+							for(var k in listTasks){
+								var r = listTasks[k];
+								var $row = jQuery("<tr><td><a href='"+ r.self +"' target='_blank'>" + r.issueKey + "</a></td><td>" + r.summary + "</td><td> " + r.startDate + "</td><td>" + r.dueDate + "</td></tr>");
+								$table.append($row);
+							}
+							
+							$wrapper.append($heading);
+							return $wrapper.append($table);
+						};
+
+                        var gadget = this;
+                        gadget.getView().addClass("g-stats");
+                        gadget.getView().empty();
+                        gadget.getView().append(jQuery("#content").clone());
+                        var $ul = jQuery("#stats-gadget-list");
+                        $ul.empty();
+						
+
+                        if (args.stats != null) {
+						console.log(args.stats);
+							jQuery("#stats-gadget-project-or-filter-name").text(args.stats.project.Project.name);
+							gadget.title = args.stats.project.Project.name;
+							gadgets.window.setTitle("QA Statistics - " + args.stats.project.Project.name);
+							
+                            for (var k in args.stats.project.Cycle) {
+							
+                                var row = args.stats.project.Cycle[k];
+								console.log(row);
+								
+								var totalApplicableIssues = (Number(row.pass) + Number(row.fail) + Number(row.blocked) + Number(row.notrun));
+								var percentComplete = Math.round( (( (Number(row.pass) + Number(row.fail)) / totalApplicableIssues) * 100.0) );
+                                var $row = jQuery("<li class=\"stats-row\"/>");
+                                var $count = jQuery("<span class=\"stats-count\">[" + totalApplicableIssues + "]</span>");
+                                var $title = jQuery("<div class=\"stats-title\">" + makeMarkup("Cycle " + row.cyclenumber + "<span style='float:right;'>Test Cycle Progress: </span>", "Cycle " + row.cyclenumber) + "</div>");
+                                $title.prepend($count);
+
+								var $thisRow = jQuery("<div/>");
+                                var percentageStrTotal = "<div class=\"stats-percentage\"><table width=\"95%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\"><tr><td width=\"" +
+                                                    percentComplete + "%\"><div class=\"colour-bar-" + row.bhi + "\"></div></td><td width=\"" +
+                                                    (100 - percentComplete) + "%\"><span class='percent-val'>" + percentComplete + "%</span></td></tr></table></div>";
+                                var $percentageTotal = jQuery(percentageStrTotal);
+                                $thisRow.append($title).append($percentageTotal);
+								$row.append($thisRow);
+								
+								
+                                $ul.append($row);
+								
+								//append the details
+
+								var safeUserId = makeSafeElementId("Cycle " + row.cyclenumber);
+								var $wrapper = jQuery("<div id=issue-details-"+ safeUserId +" style='display:none;'/>");
+								jQuery("#content").append($wrapper);
+								Morris.Bar({
+								  element: 'issue-details-' + safeUserId,
+								  data: [
+									{ label: 'Pass', val: row.pass },
+									{ label: 'Fail', val: row.fail },
+									{ label: 'Blocked', val: row.blocked },
+									{ label: 'Not Run', val: row.notrun },
+									{ label: 'N/A', val: row.notapplicable }
+								  ],
+								  xkey: 'label',
+								  ykeys: ['val'],
+								  labels: ['Test Count'],
+								  xLabelAngle: 60
+								});
+								
+                            }
+                        } else {
+                            $ul.append("<li>__MSG_gadget.stats.no.results__</li>");
+                        }
+                    },
+                    args: [{
+                        key: "stats",
+                        ajaxOptions: function () {
+                                return {
+                                    url: "http://10.5.1.125/qastats/projects/getstats.json?key=" + gadgets.util.unescapeString(this.getPref("projectKey")) + "&version=" + gadgets.util.unescapeString(this.getPref("versionNumber")),
+                                    data:  {
+                                    }
+                                };
+                        }
+                    }]
+                }
+            });
+        })();
+        </script>
+
+        <div id="template" style="display:none">
+            <div id="content">
+                <h4 class="stats-gadget-heading">
+                    <span class="stats-gadget-summary">Statistics</span>
+                </h4>
+                <ul id="stats-gadget-list">
+                </ul>
+            </div>
+        </div>
+        ]]>
+    </Content>
+</Module>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<atlassian-plugin key="cs-project-management-tools" name="Computed Synergy Project Management Tools" pluginsVersion="2">
+  <!-- Contains plugin metadata. -->
+  <plugin-info>
+    <description>Project Management Gadgets by Faisal Thaheem.</description>
+    <vendor name="Faisal Thaheem" url="http://www.computedsynergy.com"/>
+    <version>1.0</version>
+    <application-version min="4.0"/>
+  </plugin-info>
+  <web-resource key="g-cs-common">
+    <resource type="download" name="jquery.floatThead.min.js" location="js/jquery.floatThead.min.js"/>
+  </web-resource>
+  <web-resource key="g-cs-qastats">
+    <resource type="download" name="morris.css" location="css/morris.css"/>
+    <resource type="download" name="raphael-min.js" location="js/raphael-min.js"/>
+    <resource type="download" name="morris.min.js" location="js/morris.min.js"/>
+  </web-resource>
+  <web-resource key="g-cs-projects-activity">
+    <resource type="download" name="RGraph.common.core.js" location="js/RGraph.common.core.js"/>
+    <resource type="download" name="RGraph.common.effects.js" location="js/RGraph.common.effects.js"/>
+	<resource type="download" name="RGraph.hbar.js" location="js/RGraph.hbar.js"/>
+  </web-resource>
+  
+  <!-- 
+	The subversion integration service
+  -->
+	<ao key="ao-module">
+		<description>The module configuring the Active Objects service used by this plugin</description>
+		<entity>com.computedsynergy.jira.ao.SubversionActivityRecord</entity>
+	</ao>
+  
+  <!--
+        Registers the gadget spec as a plugin module. This allows the gadget to
+        appear in the gadget directory and also allows administrators to
+        disable/enable the gadget.
+     -->
+  <gadget key="extended-issue-statistics-gadget" name="Extended Issue Statistics Gadget" location="gadget-extended-issue-statistics.xml"/>
+  <gadget key="component-issue-statistics-gadget" name="Component Issue Statistics Gadget" location="gadget-component-unfinished-tasks-statistics.xml"/>
+  <gadget key="resource-utilization-matrix-gadget" name="Resource Utilization Matrix" location="gadget-resource-utilization-matrix.xml"/>
+  <gadget key="qa-statistics-gadget" name="QA Statistics" location="gadget-qa-statistics.xml"/>
+  <gadget key="project-remaining-work-gadget" name="Project Remaining Work" location="gadget-project-remaining-work.xml"/>
+  <gadget key="subversion-commits-gadget" name="Subversion Commits" location="gadget-subversion-commits.xml"/>
+  <gadget key="projects-activity-gadget" name="Projects Activity" location="gadget-projects-activity.xml"/>
+  
+  <!-- Makes the gadget Locale messages available for the gadget's use. -->
+  <resource type="download" name="i18n/ALL_ALL.xml" location="i18n/ALL_ALL.xml">
+    <param name="content-type" value="text/xml; charset=UTF-8"/>
+  </resource>
+  <!--
+        Automatically finds all JAX-RS resource classes in the plugin and
+        publishes them.
+     -->
+  <rest key="cs-pm-tools-gadget-rest-resources" path="/cs-tools-gadget" version="1.0">
+    <description>Provides the REST resource for the project list.</description>
+  </rest>
+  <!--
+        Imports the SAL UserManager class from JIRA so it can be used by
+        ProjectsResource.
+     -->
+  <component-import key="userManager" interface="com.atlassian.sal.api.user.UserManager"/>
+  <component-import key="loginUriProvider" interface="com.atlassian.sal.api.auth.LoginUriProvider" filter=""/>
+  <!-- import from the product container -->
+  <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
+  <component-import key="ao" name="Active Objects service" interface="com.atlassian.activeobjects.external.ActiveObjects">
+	<description>Component to access Active Objects functionality from the plugin</description>
+  </component-import>
+  
+  <resource type="i18n" name="i18n" location="cs-project-management-tools"/>
+  
+  <servlet name="Resource Utilization Explorer" i18n-name-key="resource-utilization-explorer.name" key="resource-utilization-explorer" class="com.computedsynergy.jira.servlet.ResourceUtilizationExplorer">
+    <description key="resource-utilization-explorer.description">The Resource Utilization Explorer Plugin</description>
+    <url-pattern>/resourceutilizationexplorer</url-pattern>
+  </servlet>
+  
+  <servlet name="Quarterly Versions Report" i18n-name-key="report-quarterly-version.name" key="report-quarterly-version" class="com.computedsynergy.jira.servlet.ReportQuarterlyVersion">
+    <description key="report-quarterly-version.description">Displays the due versions broken down quarterly.</description>
+    <url-pattern>/report-quarterly-version</url-pattern>
+  </servlet>
+  
+  <servlet name="Subversion Activity Recorder" i18n-name-key="subversion-activity-recorder.name" key="subversion-activity-recorder" class="com.computedsynergy.jira.servlet.SubversionActivityRecorder">
+    <description key="subversion-activity-recorder.description">Records the commits to subversion by users and analyses them for conformance.</description>
+    <url-pattern>/subversion-activity-recorder</url-pattern>
+  </servlet>
+
+  
+  <component-import key="templateRenderer" interface="com.atlassian.templaterenderer.TemplateRenderer" filter=""/>
+  
+
+	<web-section key="cs_links_section" name="CS Links Main Section" location="cs_links_link" weight="10"/>
+
+    <web-item key="cs_links_link" name="Link on CS Links Main Section" section="system.top.navigation.bar" weight="47">
+       <label>CS Tools</label>
+       <link linkId="cs_links_link">http://www.atlassian.com</link>
+    </web-item>
+<!--
+    <web-item key="resource_utilization_explorer_link" name="Resource Utilization Explorer" section="cs_links_link/cs_links_section" weight="10">
+        <label>Resource Utilization Explorer</label>
+        <link linkId="resource_utilization_explorer_link">/plugins/servlet/resourceutilizationexplorer</link>
+    </web-item>
+-->
+    <web-item key="report_quarterly_versions" name="Quarterly Version Releases" section="cs_links_link/cs_links_section" weight="10">
+        <label>Quarterly Version Releases</label>
+        <link linkId="report_quarterly_versions">/plugins/servlet/report-quarterly-version</link>
+    </web-item>
+
+</atlassian-plugin>

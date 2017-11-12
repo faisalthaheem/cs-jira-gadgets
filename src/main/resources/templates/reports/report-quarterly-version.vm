@@ -1,0 +1,105 @@
+<html>
+<head>
+    <title>Report &mdash; Quarterly Version Release Report &mdash;</title>
+    <meta name="decorator" content="atl.general">
+</head>
+<body class="page-type-admin">
+<div class="content-container">
+
+    <div class="content-body">
+        <h1>Report &mdash; Quarterly Version Releases For Year <script>document.write(new Date().getFullYear())</script></h1>
+
+        #if ($errors.size()>0)
+            <div class="aui-message error shadowed">
+                #foreach($error in $errors)
+                    <p class="title">
+                        <span class="aui-icon icon-error"></span>
+                        <strong>$error</strong>
+                    </p>
+                #end
+            </div>
+            <!-- .aui-message -->
+        #end
+
+        <div class="create-issue-panel">
+			
+			#if ($q1Projects.size() > 0)
+            <div class="issues">
+                <table class="aui">
+                    <thead>
+                    <tr>
+                        <th>Quarter 1 Releases</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        #foreach( $p in $q1Projects )
+                        <tr>
+                            <td>$p</td>
+                        </tr>
+                        #end
+                    </tbody>
+                </table>
+            </div>
+			#end
+			
+			#if ($q2Projects.size() > 0)
+            <div class="issues">
+                <table class="aui">
+                    <thead>
+                    <tr>
+                        <th>Quarter 2 Releases</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        #foreach( $p in $q2Projects )
+                        <tr>
+                            <td>$p</td>
+                        </tr>
+                        #end
+                    </tbody>
+                </table>
+            </div>
+			#end
+			
+			#if ($q3Projects.size() > 0)
+            <div class="issues">
+                <table class="aui">
+                    <thead>
+                    <tr>
+                        <th>Quarter 3 Releases</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        #foreach( $p in $q3Projects )
+                        <tr>
+                            <td>$p</td>
+                        </tr>
+                        #end
+                    </tbody>
+                </table>
+            </div>
+			#end
+			
+			#if ($q4Projects.size() > 0)
+            <div class="issues">
+                <table class="aui">
+                    <thead>
+                    <tr>
+                        <th>Quarter 4 Releases</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        #foreach( $p in $q4Projects )
+                        <tr>
+                            <td>$p</td>
+                        </tr>
+                        #end
+                    </tbody>
+                </table>
+            </div>
+			#end
+        </div>
+    </div>
+</div>
+</body>
+</html>

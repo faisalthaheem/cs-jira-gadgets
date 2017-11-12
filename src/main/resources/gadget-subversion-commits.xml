@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Module>
+    <ModulePrefs title="Subversion Commits" directory_title="Subversion Commits" description="Displays commits to subversion by users and analyses them for conformance."
+             author="Faisal Thaheem" author_affiliation="Computed Synergy"
+             author_location="Islamabad, Pakistan" height="100"
+             screenshot='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-screenshot.png")'
+             thumbnail='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-thumb.png")'>
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                Other
+            </Param>
+        </Optional>
+        <Require feature="setprefs" />
+        <Require feature="views" />
+        <Optional feature="atlassian.util" />
+        <Optional feature='auth-refresh' />
+        <Require feature="settitle"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="oauthpopup" />
+        #oauth
+        #supportedLocales("gadget.common,gadget.stats")
+    </ModulePrefs>
+    <UserPref name="isConfigured" datatype="hidden" default_value="false" />
+    <UserPref name="refresh" datatype="hidden" default_value="false" />
+    <!-- use of requireContext below is to invoke batching of files -->
+    <Content type="html" view="profile,canvas,home">
+        <![CDATA[
+        #requireResource("com.atlassian.jira.gadgets:g-stats")
+		#requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+		#requireResource("com.atlassian.auiplugin:ajs")
+        #includeResources()
+        <style type="text/css">
+
+		.g-stats .stats-percentage .colour-bar-red {
+			border-top: 13px solid #ff0000;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-yellow {
+			border-top: 13px solid #ffff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-blue {
+			border-top: 13px solid #0000ff;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-green {
+			border-top: 13px solid #00ff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.logEntry {
+			font-family: monospace;
+		}
+		
+		.logEntry .comments {
+			overflow: hidden;
+			margin-left: 5px;
+			display: block;
+		}
+		
+		.logEntry .userName {
+			overflow: hidden;
+			margin-left: 5px;
+			width: 20%;
+			display: block;
+			float: left;
+		}
+		
+		.logEntry .revision {
+			overflow: hidden;
+			margin-left: 5px;
+			width: 10%;
+			display: block;
+			float: left;
+		}
+		
+		.logEntry .repoName {
+			overflow: hidden;
+			margin-left: 5px;
+			width: 20%;
+			display: block;
+			float: left;
+		}
+		
+		
+		
+		.logEntry .alt {
+			background-color: lightgrey;
+		}
+		
+		thead {
+			border-bottom: 1px dashed;
+		}
+        </style>
+
+        <script type="text/javascript">
+		
+		function makeSafeElementId(username){
+			return username.replace(/[\s\.]/, '');
+		}
+		
+        (function ()
+        {
+            gadgets.window.setTitle("Subversion Commits");
+            var gadget = AJS.Gadget({
+                baseUrl: "__ATLASSIAN_BASE_URL__",
+                useOauth: "/rest/gadget/1.0/currentUser",
+                config: {
+                    descriptor: function (args)
+                    {
+
+                        var gadget = this;
+                        var statType = function(name)
+                        {
+                            return {
+                                userpref: name,
+                                label: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".label"),
+                                description: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".description"),
+                                type: "select",
+                                selected: gadget.getPref(name),
+                                options: args.statType.stats
+                            };
+                        };
+                        var option = function(type, value)
+                        {
+                            return {
+                                label:gadget.getMsg("gadget.stats." + type.toLowerCase() + "." + value.toLowerCase()  + ".label"),
+                                value: value
+                            };
+                        };
+                        return  {
+                            theme : function ()
+                            {
+                                if (gadgets.window.getViewportDimensions().width < 450){
+                                        return "gdt top-label";
+                                    }
+                                    else
+                                    {
+                                        return "gdt";
+                                    }
+                            }(),
+
+                            fields: [
+                                AJS.gadget.fields.nowConfigured()
+                            ]
+                        };
+                    },
+                    args: [{
+                            key: "statType",
+                        }]
+                },
+                view: {
+                    enableReload: true,
+                    onResizeReload: true,
+                    template: function (args)
+                    {
+
+                        var gadget = this;
+                        gadget.getView().addClass("g-stats");
+                        gadget.getView().empty();
+                        gadget.getView().append(jQuery("#content").clone());
+                        var $ul = jQuery("#subversion-commits-list");
+                        $ul.empty();
+						
+
+                        if (args.svnStats != null) {
+							
+							$ul.append('<div class="logEntry"><div class="alt"><span class="repoName">Repository</span><span class="revision">Rev</span><span class="userName">Username</span><span class="comments">Log message</span></div></div>');
+							
+							var i = 0;
+							for(var t in args.svnStats){
+								var rowClass = '';
+								if(i & 1 == 1){
+									rowClass = 'alt';
+								}	
+								$ul.append('<div class="logEntry"><div class="'+ rowClass +'"><span class="repoName">' + args.svnStats[t].repoName + '</span><span class="revision">' + args.svnStats[t].revision + '</span><span class="userName">' + args.svnStats[t].user + '</span><span class="comments">' + args.svnStats[t].comments + '</span></div></div>');
+								i++;
+							}
+							
+                        } else {
+                            $ul.append("<li>__MSG_gadget.stats.no.results__</li>");
+                        }
+                    },
+                    args: [{
+                        key: "svnStats",
+                        ajaxOptions: function () {
+                                return {
+                                    url: "/rest/cs-tools-gadget/1.0/misc/list-subversion-commits.json",
+                                    data:  {
+                                    }
+                                };
+                        }
+                    }]
+                }
+            });
+        })();
+        </script>
+
+        <div id="template" style="display:none">
+            <div id="content">
+                <h4 class="stats-gadget-heading">
+                    <span class="stats-gadget-summary">Latest 100 commits</span>
+                </h4>
+                <div id="subversion-commits-list">
+                </div>
+            </div>
+        </div>
+        ]]>
+    </Content>
+</Module>

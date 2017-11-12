@@ -1,0 +1,57 @@
+<html>
+<head>
+    <title>Resource Utilization Explorer &mdash;</title>
+    <meta name="decorator" content="atl.general">
+</head>
+<body class="page-type-admin">
+<div class="content-container">
+
+    <div class="content-body">
+        <h1>Resource Utilization Explorer</h1>
+
+        #if ($errors.size()>0)
+            <div class="aui-message error shadowed">
+                #foreach($error in $errors)
+                    <p class="title">
+                        <span class="aui-icon icon-error"></span>
+                        <strong>$error</strong>
+                    </p>
+                #end
+            </div>
+            <!-- .aui-message -->
+        #end
+
+        <div class="create-issue-panel">
+			<form id="admin" class="aui" method="POST">
+				<div class="field-group">
+					 <label for="from">From - To:</label>
+					 <input class="aui-date-picker" id="from" name="from" type="date">
+					 <input class="aui-date-picker" id="to" name="to" type="date">
+					 <input type="submit" value="Filter" class="button">
+				</div>
+			</form>
+			
+			#if ($users.size() > 0)
+            <div class="issues">
+                <table class="aui">
+                    <thead>
+                    <tr>
+                        <th>username</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        #foreach( $user in $users )
+                        <tr>
+                            <td>$user.getId()</td>
+                            <td>$user.getLabel()</td>
+                        </tr>
+                        #end
+                    </tbody>
+                </table>
+            </div>
+        #end
+        </div>
+    </div>
+</div>
+</body>
+</html>

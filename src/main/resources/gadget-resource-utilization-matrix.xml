@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Module>
+    <ModulePrefs title="Resource Utilization Matrix" directory_title="Resource Utilization Matrix" description="Displays the resource utilization over few weeks by accounting over the assigned tasks and estimated efforts."
+             author="Faisal Thaheem" author_affiliation="Computed Synergy"
+             author_location="Islamabad, Pakistan" height="100"
+             screenshot='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-screenshot.png")'
+             thumbnail='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-thumb.png")'>
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                Other
+            </Param>
+        </Optional>
+        <Require feature="setprefs" />
+        <Require feature="views" />
+        <Optional feature="atlassian.util" />
+        <Optional feature='auth-refresh' />
+        <Require feature="settitle"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="oauthpopup" />
+        #oauth
+        #supportedLocales("gadget.common,gadget.stats")
+    </ModulePrefs>
+	<UserPref name="isConfigured" datatype="hidden" default_value="false" />
+	<UserPref name="userlist" datatype="hidden" default_value="all" />
+    <UserPref name="refresh" datatype="hidden" default_value="false" />
+    <!-- use of requireContext below is to invoke batching of files -->
+    <Content type="html" view="profile,canvas,home">
+        <![CDATA[
+		#requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+		#requireResource("cs-project-management-tools:g-cs-common")
+        #includeResources()
+        <style type="text/css">
+			tr:nth-child(even) {background: #efb; border-bottom: 1px dashed;}
+			tr:nth-child(odd) {background: #FFF}
+			td{
+				padding: 5px 5px 0 5px;
+			}
+			
+			td:nth-child(odd){ 
+				background: #FFF;
+			}
+			
+			td:nth-child(even){
+				background: #efb;
+			}
+			
+			#content{
+				overflow-x: auto;
+			}
+			
+			table{
+				text-align: center;
+			}
+			
+			thead{
+				border-bottom: 1px solid;
+			}
+		</style>
+
+        <script type="text/javascript">
+		
+        (function ()
+        {
+            gadgets.window.setTitle("Resource Utilization Matrix");
+            var gadget = AJS.Gadget({
+                baseUrl: "__ATLASSIAN_BASE_URL__",
+                useOauth: "/rest/gadget/1.0/currentUser",
+                config: {
+                    descriptor: function (args)
+                    {
+
+                        var gadget = this;
+                        
+                        var option = function(type, value)
+                        {
+                            return {
+                                label:gadget.getMsg("gadget.stats." + type.toLowerCase() + "." + value.toLowerCase()  + ".label"),
+                                value: value
+                            };
+                        };
+                        return  {
+                            theme : function ()
+                            {
+                                if (gadgets.window.getViewportDimensions().width < 450){
+                                        return "gdt top-label";
+                                    }
+                                    else
+                                    {
+                                        return "gdt";
+                                    }
+                            }(),
+
+                            fields: [
+								AJS.gadget.fields.nowConfigured(),
+								{
+									id: "userlist",
+									class: "",
+									userpref: "userlist",
+									label: "Select Users",
+									description:"Select users to display their utlization",
+									type: "multiselect",
+									selected: gadget.getPref("userlist"), /* Only use this if you only want value selected.
+																					 Otherwise specify selection state on the option itself */
+									options: args.userlist
+								},
+                            ]
+                        };
+                    },
+                    args: [{
+                            key: "userlist",
+                            ajaxOptions:  "/rest/cs-tools-gadget/1.0/projects/user-list.json"
+                        }]
+                },
+                view: {
+                    enableReload: true,
+                    onResizeReload: false,
+                    template: function (args)
+                    {
+                        var gadget = this;
+                        gadget.getView().addClass("g-stats");
+                        gadget.getView().empty();
+                        gadget.getView().append(jQuery("#content").clone());
+                        var $tbl = jQuery("#resource-utilization-matrix");
+                        $tbl.empty();
+						
+						//create table header
+						var $thead = jQuery("<thead/>");
+						var $theadRow = jQuery("<tr/>");
+						
+						
+						var $theadCol = jQuery("<td>User</td>");
+						$theadRow.append($theadCol);
+						var $theadCol = jQuery("<td>Assigned / (w/o) Estimates</td>");
+						$theadRow.append($theadCol);
+						
+						if (args.stats != null) {
+                            for (var k in args.stats.bandwidthStatistics[0].workTab) {
+								var $theadCol = jQuery("<td>" + k + "</td>");
+								$theadRow.append($theadCol);
+							}
+						}
+						
+						$thead.append($theadRow);
+						$tbl.append($thead);
+
+                        if (args.stats != null) {
+                            for (var k in args.stats.bandwidthStatistics) {
+								
+                                var stat = args.stats.bandwidthStatistics[k];
+								var $resourceRow = jQuery("<tr/>");
+								
+								var $resourceCol = jQuery("<td>" + stat.displayName + "</td>");
+								$resourceRow.append($resourceCol);
+								
+								var $resourceCol = jQuery("<td><span title='The following tasks do not have estimates defined: "+ stat.tasksWithoutEstimates +"'>" + stat.totalAssingedIssues + "/" + stat.totalAssignedIssuesWithoutEstimates + "</span></td>");
+								$resourceRow.append($resourceCol);
+								
+								for(var l in stat.workTab){
+									var tabItem = stat.workTab[l];
+									
+									var $resourceCol = jQuery("<td><span title='"+ stat.workAssignments[l] +"'>" + tabItem + "</span></td>");
+									$resourceRow.append($resourceCol);
+								}
+								
+								$tbl.append($resourceRow);
+								$tbl.floatThead();
+                            }
+                        } else {
+                            $ul.append("<li>__MSG_gadget.stats.no.results__</li>");
+                        }
+                    },
+                    args: [{
+                        key: "stats",
+                        ajaxOptions: function () {
+                                return {
+                                    url: "/rest/cs-tools-gadget/1.0/projects/resource-utilization.json",
+                                    data:  {
+										userlist: this.getPref("userlist")
+                                    }
+                                };
+                        }
+                    }]
+                }
+            });
+        })();
+        </script>
+
+        <div id="template" style="display:none">
+            <div id="content">
+                <h4 class="stats-gadget-heading">
+                    <span class="stats-gadget-summary">Resource Utilization Matrix</span>
+                </h4>
+				<table id="resource-utilization-matrix">
+				</table>
+            </div>
+        </div>
+        ]]>
+    </Content>
+</Module>

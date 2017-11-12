@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Module>
+    <ModulePrefs title="Projects Activity" directory_title="Projects Activity" description="Displays a graph displaying comparitive ."
+             author="Faisal Thaheem" author_affiliation="Computed Synergy"
+             author_location="Islamabad, Pakistan" height="100"
+             screenshot='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-screenshot.png")'
+             thumbnail='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-thumb.png")'>
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                Other
+            </Param>
+        </Optional>
+        <Require feature="setprefs" />
+        <Require feature="views" />
+        <Optional feature="atlassian.util" />
+        <Optional feature='auth-refresh' />
+        <Require feature="settitle"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="oauthpopup" />
+        #oauth
+        #supportedLocales("gadget.common,gadget.stats")
+    </ModulePrefs>
+    <UserPref name="isConfigured" datatype="hidden" default_value="false" />
+    <UserPref name="refresh" datatype="hidden" default_value="false" />
+    <!-- use of requireContext below is to invoke batching of files -->
+    <Content type="html" view="profile,canvas,home">
+        <![CDATA[
+        #requireResource("com.atlassian.jira.gadgets:g-stats")
+		#requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+		#requireResource("com.atlassian.auiplugin:ajs")
+		#requireResource("cs-project-management-tools:g-cs-projects-activity")
+        #includeResources()
+        <style type="text/css">
+
+		</style>
+
+        <script type="text/javascript">
+		
+		
+        (function ()
+        {
+            gadgets.window.setTitle("Projects Activity - ");
+            var gadget = AJS.Gadget({
+                baseUrl: "__ATLASSIAN_BASE_URL__",
+                useOauth: "/rest/gadget/1.0/currentUser",
+                config: {
+                    descriptor: function (args)
+                    {
+
+                        var gadget = this;
+                        var statType = function(name)
+                        {
+                            return {
+                                userpref: name,
+                                label: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".label"),
+                                description: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".description"),
+                                type: "select",
+                                selected: gadget.getPref(name),
+                                options: args.statType.stats
+                            };
+                        };
+                        var option = function(type, value)
+                        {
+                            return {
+                                label:gadget.getMsg("gadget.stats." + type.toLowerCase() + "." + value.toLowerCase()  + ".label"),
+                                value: value
+                            };
+                        };
+                        return  {
+                            theme : function ()
+                            {
+                                if (gadgets.window.getViewportDimensions().width < 450){
+                                        return "gdt top-label";
+                                    }
+                                    else
+                                    {
+                                        return "gdt";
+                                    }
+                            }(),
+
+                            fields: [
+								AJS.gadget.fields.nowConfigured(),
+                            ]
+                        };
+                    },
+                    args: [{
+                            key: "statType",
+                        }]
+                },
+                view: {
+                    enableReload: true,
+                    onResizeReload: true,
+                    template: function (args)
+                    {
+						var gadget = this;
+
+                        if (args.stats != null) {
+							
+							gadget.title = 'Projects Activity';
+							gadgets.window.setTitle("Projects Activity");
+							
+							var canvas = document.getElementById('cvs');
+							canvas.height = 200 + (args.stats.projectNames.length * 25);
+							
+							var hbar = new RGraph.HBar({
+								id: 'cvs',
+								data: args.stats.projectActivity,
+								options: {
+									backgroundGrid: true,
+									xmax: args.stats.maxScore,
+									scaleDecimals: 1,
+									colors: ['#164366','#164366','#164366','#FDB515','#164366'],
+									colorsSequential: true,
+									labels: args.stats.projectNames,
+									labelsAbove: true,
+									labelsAboveDecimals: 1,
+									noxaxis: true,
+									gutterLeft: 175,
+									xlabels: false
+								}
+							}).grow();
+							
+                        } 
+                    },
+                    args: [{
+                        key: "stats",
+                        ajaxOptions: function () {
+                                return {
+                                    url: "/rest/cs-tools-gadget/1.0/projects/projects-activity.json",
+                                    data:  {
+                                    }
+                                };
+                        }
+                    }]
+                }
+            });
+        })();
+        </script>
+
+        <div>
+            <div id="content">
+                <h4 class="stats-gadget-heading">
+                </h4>
+                <canvas id="cvs" width="600" height="400">
+					[No canvas support]
+				</canvas>
+            </div>
+        </div>
+        ]]>
+    </Content>
+</Module>

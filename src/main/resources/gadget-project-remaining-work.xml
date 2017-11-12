@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Module>
+    <ModulePrefs title="Project Remaining Work" directory_title="Project Remaining Work" description="Displays the total work, logged work and remaining work for a project broken down by versions."
+             author="Faisal Thaheem" author_affiliation="Computed Synergy"
+             author_location="Islamabad, Pakistan" height="100"
+             screenshot='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-screenshot.png")'
+             thumbnail='#staticResourceUrl("com.atlassian.jira.gadgets:stats-gadget", "stats-thumb.png")'>
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                Other
+            </Param>
+        </Optional>
+        <Require feature="setprefs" />
+        <Require feature="views" />
+        <Optional feature="atlassian.util" />
+        <Optional feature='auth-refresh' />
+        <Require feature="settitle"/>
+        <Require feature="dynamic-height"/>
+        <Require feature="oauthpopup" />
+        #oauth
+        #supportedLocales("gadget.common,gadget.stats")
+    </ModulePrefs>
+    <UserPref name="isConfigured" datatype="hidden" default_value="false" />
+    <UserPref name="projectOrFilterId" datatype="hidden" />
+    <UserPref name="refresh" datatype="hidden" default_value="false" />
+    <!-- use of requireContext below is to invoke batching of files -->
+    <Content type="html" view="profile,canvas,home">
+        <![CDATA[
+        #requireContext("com.atlassian.jira.gadgets:autocomplete")
+        #requireResource("com.atlassian.jira.gadgets:g-stats")
+		#requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+		#requireResource("com.atlassian.auiplugin:ajs")
+		#requireResource("cs-project-management-tools:g-cs-qastats")
+        #includeResources()
+        <style type="text/css">
+
+		.g-stats .stats-percentage .colour-bar-red {
+			border-top: 13px solid #ff0000;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-yellow {
+			border-top: 13px solid #ffff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-blue {
+			border-top: 13px solid #0000ff;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		.g-stats .stats-percentage .colour-bar-green {
+			border-top: 13px solid #00ff00;
+			display: block;
+			height: 0;
+			overflow: hidden;
+		}
+		
+		thead {
+			border-bottom: 1px dashed;
+		}
+        </style>
+
+        <script type="text/javascript">
+		
+		function makeSafeElementId(username){
+			return username.replace(/[\s\.]/, '');
+		}
+		
+        (function ()
+        {
+            gadgets.window.setTitle("Project Remaining Work - ");
+            var gadget = AJS.Gadget({
+                baseUrl: "__ATLASSIAN_BASE_URL__",
+                useOauth: "/rest/gadget/1.0/currentUser",
+                config: {
+                    descriptor: function (args)
+                    {
+
+                        var gadget = this;
+                        var statType = function(name)
+                        {
+                            return {
+                                userpref: name,
+                                label: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".label"),
+                                description: gadget.getMsg("gadget.stats." + name.toLowerCase()  + ".description"),
+                                type: "select",
+                                selected: gadget.getPref(name),
+                                options: args.statType.stats
+                            };
+                        };
+                        var option = function(type, value)
+                        {
+                            return {
+                                label:gadget.getMsg("gadget.stats." + type.toLowerCase() + "." + value.toLowerCase()  + ".label"),
+                                value: value
+                            };
+                        };
+                        return  {
+                            theme : function ()
+                            {
+                                if (gadgets.window.getViewportDimensions().width < 450){
+                                        return "gdt top-label";
+                                    }
+                                    else
+                                    {
+                                        return "gdt";
+                                    }
+                            }(),
+
+                            fields: [
+                                AJS.gadget.fields.projectOrFilterPicker(gadget, "projectOrFilterId", args.filterIds),
+                                AJS.gadget.fields.nowConfigured()
+                            ]
+                        };
+                    },
+                    args: [{
+                            key: "statType",
+                        }]
+                },
+                view: {
+                    enableReload: true,
+                    onResizeReload: false,
+                    template: function (args)
+                    {
+
+                        var gadget = this;
+                        gadget.getView().addClass("g-stats");
+                        gadget.getView().empty();
+                        gadget.getView().append(jQuery("#content").clone());
+                        var $ul = jQuery("#project-remaining-work");
+                        $ul.empty();
+						
+
+                        if (args.stats != null) {
+							console.log(args.stats);
+							
+							gadgets.window.setTitle("Project Remaining Work - " + args.stats.projectName);
+						
+							Morris.Bar({
+							  element: 'project-remaining-work',
+							  data: args.stats.stats,
+							  xkey: 'label',
+							  ykeys: ['remainingWork'],
+							  labels: ['Remainig Work (man hours)'],
+							  xLabelAngle: 60
+							});
+							
+                        } else {
+                            $ul.append("<li>__MSG_gadget.stats.no.results__</li>");
+                        }
+                    },
+                    args: [{
+                        key: "stats",
+                        ajaxOptions: function () {
+                                return {
+                                    url: "/rest/cs-tools-gadget/1.0/projects/get-project-remaining-work.json?projectName=" + gadgets.util.unescapeString(this.getPref("projectOrFilterId")),
+                                    data:  {
+                                    }
+                                };
+                        }
+                    }]
+                }
+            });
+        })();
+        </script>
+
+        <div id="template" style="display:none">
+            <div id="content">
+                <h4 class="stats-gadget-heading">
+                    <span class="stats-gadget-summary">Statistics</span>
+                </h4>
+                <div id="project-remaining-work">
+                </div>
+            </div>
+        </div>
+        ]]>
+    </Content>
+</Module>
